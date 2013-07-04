@@ -3,38 +3,70 @@
 #include "ofMain.h"
 #include "ofxOpenCv.h"
 #include "cvblob.h"
+#include "ofxUI.h"
 
 using namespace cvb;
 using namespace cv;
 
 class testApp : public ofBaseApp{
-	public:
-		void setup();
-		void update();
-		void draw();
-		
-		void keyPressed(int key);
-		void keyReleased(int key);
-		void mouseMoved(int x, int y);
-		void mouseDragged(int x, int y, int button);
-		void mousePressed(int x, int y, int button);
-		void mouseReleased(int x, int y, int button);
-		void windowResized(int w, int h);
-		void dragEvent(ofDragInfo dragInfo);
-		void gotMessage(ofMessage msg);
 	
-		// Videodude
-		
+public:
+	void setup();
+	void update();
+	void draw();
+	
+	void keyPressed(int key);
+	void keyReleased(int key);
+	void mouseMoved(int x, int y);
+	void mouseDragged(int x, int y, int button);
+	void mousePressed(int x, int y, int button);
+	void mouseReleased(int x, int y, int button);
+	void windowResized(int w, int h);
+	void dragEvent(ofDragInfo dragInfo);
+	void gotMessage(ofMessage msg);
+	void exit();
+	
+	// Videodude
+	
 	ofVideoGrabber elVideo;
 	
-	//CV - cada una de las im‡genes.
+	//************* ofxUI *****************//
+	
+	ofxUICanvas * leftCanvas;
+	void guiEvent(ofxUIEventArgs &e);;
+	
+	// Parameters
+	int uiWidth;
+	int margenH;
+	int sliderWidth;
+	int sliderHeight;
+	
+	// Dimensiones de las im‡genes a mostrar 
+	int w_disp;
+	int h_disp;
+	
+	// Canales
+	int selectedChannel;
+	int red, blue, green, grayscale;
+	
+	
+	 
+	// *************    CV   *************** //
+	
+	// Imagen fuente
 	ofxCvColorImage colorImg;
 	
 	// Background para restar
 	ofxCvColorImage bkg;
 	
-	ofxCvGrayscaleImage red;
-	ofxCvGrayscaleImage blue;
+	// Im‡genes para display
+	ofImage ofUntouchedSrc;
+	ofImage ofSrc;
+	ofImage ofBkg;
+	ofImage ofSub;
+	ofImage ofThres;
+	
+	// Imagen fuente en grises
 	ofxCvGrayscaleImage escalaDeGrises;
 	ofxCvGrayscaleImage imgRestada;
 	ofxCvGrayscaleImage bkgGrises;
@@ -49,6 +81,10 @@ class testApp : public ofBaseApp{
 	//cvBlob stuff	
 	CvBlobs blobs;
 	
+	// Parameters
+	int bkgBlurFact;
+	int sourceBlurFact;
+	
 //	std::map<CvLabel,CvBlob *> CvBlobs;
 
 	
@@ -57,17 +93,10 @@ class testApp : public ofBaseApp{
 	int w_cam;
 	int h_cam; 
 	
-	// Dimensiones de las im‡genes
-	int w_disp;
-	int h_disp;
+	
 	
 	int id;
 	
-	// Layout
-	int h_offset;
-	int v_offset;
-	int margen_h;
-	int margen_v;
 	
 	// letra
 	ofTrueTypeFont font;
