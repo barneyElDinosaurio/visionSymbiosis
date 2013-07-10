@@ -56,20 +56,20 @@ namespace cvb
   void cvFilterByArea(CvBlobs &blobs, unsigned int minArea, unsigned int maxArea)
   {
     CvBlobs::iterator it=blobs.begin();
-    while(it!=blobs.end())
-    {
-      CvBlob *blob=(*it).second;
-      if ((blob->area<minArea)||(blob->area>maxArea))
-      {
-	cvReleaseBlob(blob);
-
-	CvBlobs::iterator tmp=it;
-	++it;
-	blobs.erase(tmp);
-      }
-      else
-	++it;
-    }
+	  while(it!=blobs.end())
+	  {
+		  CvBlob *blob=(*it).second;
+		  if ((blob->area<minArea)||(blob->area>maxArea))
+		  {
+			  cvReleaseBlob(blob);
+			  
+			  CvBlobs::iterator tmp=it;
+			  ++it;
+			  blobs.erase(tmp);
+		  }
+		  else
+			  ++it;
+	  }
   }
 
   void cvFilterByLabel(CvBlobs &blobs, CvLabel label)

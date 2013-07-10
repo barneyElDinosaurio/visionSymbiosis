@@ -4,6 +4,7 @@
 #include "ofxOpenCv.h"
 #include "cvblob.h"
 #include "ofxUI.h"
+#include "ofxOsc.h"
 
 using namespace cvb;
 using namespace cv;
@@ -33,13 +34,25 @@ public:
 	//************* ofxUI *****************//
 	
 	ofxUICanvas * leftCanvas;
-	void guiEvent(ofxUIEventArgs &e);;
+	ofxUICanvas * topCanvas;
+	ofxUICanvas * centerCanvas;
+	ofxUICanvas * oscCanvas;
+	void guiEvent(ofxUIEventArgs &e);
+	void guiEventTopCanvas(ofxUIEventArgs &e);
+	void guiEventCenterCanvas(ofxUIEventArgs &e);
+	void guiEventOscCanvas(ofxUIEventArgs &e);
 	
 	// Parameters
 	int uiWidth;
 	int margenH;
 	int sliderWidth;
 	int sliderHeight;
+	int topCanvasWidth;
+	int topCanvasHeight;
+	int centerCanvasWidth;
+	int centerCanvasHeight;
+	int oscCanvasWidth;
+	int oscCanvasHeight;
 	
 	// Dimensiones de las im‡genes a mostrar 
 	int w_disp;
@@ -49,6 +62,12 @@ public:
 	int selectedChannel;
 	int red, blue, green, grayscale;
 	
+	// *******   OSC ******* //
+	
+	ofxOscSender oscSender;
+	bool sendThroughOsc;
+	string HOST;
+	int PORT;
 	
 	 
 	// *************    CV   *************** //
@@ -65,6 +84,7 @@ public:
 	ofImage ofBkg;
 	ofImage ofSub;
 	ofImage ofThres;
+	ofImage ofBlobs;
 	
 	// Imagen fuente en grises
 	ofxCvGrayscaleImage escalaDeGrises;
@@ -84,7 +104,11 @@ public:
 	// Parameters
 	int bkgBlurFact;
 	int sourceBlurFact;
-	
+	int remapLowValue;
+	int remapHighValue;
+	bool contrastStretch;
+	float minBlobArea;
+	float maxBlobArea;
 //	std::map<CvLabel,CvBlob *> CvBlobs;
 
 	
@@ -97,7 +121,5 @@ public:
 	
 	int id;
 	
-	
-	// letra
-	ofTrueTypeFont font;
+
 };

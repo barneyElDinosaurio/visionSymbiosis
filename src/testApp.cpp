@@ -3,15 +3,18 @@
 //--------------------------------------------------------------
 void testApp::setup(){
 	ofEnableSmoothing();
-	id = 0;
+	
+	// ****   Video **** //
+	id = 0; // Device id
 	w_cam = 640/2;
 	h_cam = 480/2;
-	
 	
 	
 	elVideo.listDevices();
 	elVideo.setDeviceID(id);
 	elVideo.initGrabber( w_cam , h_cam );
+	
+	// **** Image allocation **** //
 	
 	colorImg.allocate( w_cam, h_cam );
 	escalaDeGrises.allocate( w_cam, h_cam );
@@ -19,35 +22,44 @@ void testApp::setup(){
 	bkg.allocate( w_cam, h_cam );
 	bkgGrises.allocate( w_cam, h_cam );
 	thresholded.allocate( w_cam, h_cam );
+	labeledImage.allocate( w_cam, h_cam );
    
-	// UI IMAGES
+	// **** Allocation of UI images (for display) ***** //
 	ofUntouchedSrc.setFromPixels( colorImg.getPixelsRef() );
 	ofBkg.setFromPixels( bkg.getPixelsRef() );
 	ofSrc.setFromPixels( colorImg.getPixelsRef() );
 	ofSub.setFromPixels( imgRestada.getPixelsRef() );
 	ofThres.setFromPixels( thresholded.getPixelsRef() );
+	ofBlobs.setFromPixels( colorImg.getPixelsRef() );
 
-	// Parameters
+	// **** Detection Parameters *****//
 	
 	bkgBlurFact = 5;
 	sourceBlurFact = 5;
-	
-	
-	labeledImage.allocate( w_cam, h_cam );
-	
-	otherImage.allocate( w_cam, h_cam );
-	
-	
-	font.loadFont("verdana.ttf", 14);
-	
-	
+	remapLowValue = 0;
+	remapHighValue = 255;
+	contrastStretch = false;
+	minBlobArea = 0;
+	maxBlobArea = w_cam*h_cam*0.5;
 	threshold = 80;
-
 	
-	//********** GUI ***********
+	// ****** OSC ******* //
+	
+	HOST = "127.0.0.1";
+	PORT = 9001;
+	oscSender.setup( HOST, PORT );
+	sendThroughOsc = false;
+	
+	//********** GUI *********** //
 	float xInit = OFX_UI_GLOBAL_WIDGET_SPACING; 
 	uiWidth = 230;
 	margenH = 0;
+	topCanvasWidth = uiWidth;
+	topCanvasHeight = 500;
+	oscCanvasWidth = topCanvasWidth;
+	oscCanvasHeight = 300;
+	centerCanvasWidth = 400;
+	centerCanvasHeight = 600;
 	
 	w_disp = 180;
 	h_disp = int( h_cam * w_disp / float( w_cam ) );
@@ -61,8 +73,11 @@ void testApp::setup(){
 	
 		 
 	leftCanvas = new ofxUICanvas(0.0, margenH, uiWidth , ofGetHeight() - margenH); 
-	//leftCanvas->addWidget(<#ofxUIWidget *widget#>)
+	topCanvas = new ofxUICanvas( uiWidth + xInit, margenH, topCanvasWidth , topCanvasHeight); 
+	centerCanvas = new ofxUICanvas( uiWidth + xInit + topCanvasWidth + xInit, margenH, centerCanvasWidth, centerCanvasHeight );
+	oscCanvas = new ofxUICanvas( uiWidth + xInit, margenH + topCanvasHeight + xInit , oscCanvasWidth , oscCanvasHeight);
 	
+	// ********** LEFT CANVAS ********* //
 
 	// SOURCE MODULE
 	leftCanvas->addWidgetDown( new ofxUILabel("SOURCE", OFX_UI_FONT_SMALL) );
@@ -95,40 +110,69 @@ void testApp::setup(){
     leftCanvas->setWidgetPosition(OFX_UI_WIDGET_POSITION_RIGHT);
 	leftCanvas->addWidgetRight(new ofxUIImage( w_disp, h_disp , &ofBkg ,"Background"), OFX_UI_ALIGN_RIGHT );
 	
+	// ********** SECOND CANVAS ********* //
 	
-
 	// SUBTRACTED MODULE
-	leftCanvas->setWidgetPosition( OFX_UI_WIDGET_POSITION_DOWN, OFX_UI_ALIGN_LEFT);
-	leftCanvas->addWidgetDown( new ofxUILabel("SUBTRACTED", OFX_UI_FONT_SMALL) );
-	leftCanvas->setWidgetPosition(OFX_UI_WIDGET_POSITION_DOWN);
-	leftCanvas->addSpacer();
+	topCanvas->setWidgetPosition( OFX_UI_WIDGET_POSITION_DOWN, OFX_UI_ALIGN_LEFT);
+	topCanvas->addWidgetDown( new ofxUILabel("SUBTRACTED", OFX_UI_FONT_SMALL) );
+	topCanvas->setWidgetPosition(OFX_UI_WIDGET_POSITION_DOWN);
+	topCanvas->addSpacer();
 	
-	//leftCanvas->addSlider("BLUR_S", 0, 10, sourceBlurFact , sliderWidth , sliderHeight );
-	//leftCanvas->setWidgetPosition(OFX_UI_WIDGET_POSITION_RIGHT);
-	leftCanvas->addImage("Subtracted", &ofSub);//(new ofxUIImage( w_disp, h_disp , &ofSrc,"Source"), OFX_UI_ALIGN_RIGHT );
+	//topCanvas->addSlider("BLUR_S", 0, 10, sourceBlurFact , sliderWidth , sliderHeight );
+	//topCanvas->setWidgetPosition(OFX_UI_WIDGET_POSITION_RIGHT);
+	topCanvas->addRangeSlider("Remap", -255, 512, 0, 255, sliderWidth, sliderHeight );
+	//topCanvas->setPlacer
+	topCanvas->setWidgetPosition(OFX_UI_WIDGET_POSITION_RIGHT);
+	topCanvas->addWidgetRight(new ofxUIImage( w_disp, h_disp, &ofSub, "Subtracted" ),OFX_UI_ALIGN_RIGHT );
+	topCanvas->setWidgetPosition( OFX_UI_WIDGET_POSITION_DOWN, OFX_UI_ALIGN_LEFT);
+	topCanvas->setWidgetFontSize( OFX_UI_FONT_SMALL );
+	topCanvas->addButton("Reset", false);
+	topCanvas->addToggle("Contrast stretch", false);
+	
+	//topCanvas->addImage("Subtracted", &ofSub);//(new ofxUIImage( w_disp, h_disp , &ofSrc,"Source"), OFX_UI_ALIGN_RIGHT );
 	
 	
 	// Threshold module
-	leftCanvas->setWidgetPosition( OFX_UI_WIDGET_POSITION_LEFT, OFX_UI_ALIGN_LEFT);
-	leftCanvas->addWidgetDown( new ofxUILabel("THRESHOLDED", OFX_UI_FONT_SMALL) );
-	leftCanvas->setWidgetPosition(OFX_UI_WIDGET_POSITION_DOWN);
-	leftCanvas->addSpacer();
+	topCanvas->setWidgetPosition( OFX_UI_WIDGET_POSITION_LEFT, OFX_UI_ALIGN_LEFT);
+	topCanvas->addWidgetDown( new ofxUILabel("THRESHOLDED", OFX_UI_FONT_SMALL) );
+	topCanvas->setWidgetPosition(OFX_UI_WIDGET_POSITION_DOWN);
+	topCanvas->addSpacer();
 	
-	leftCanvas->addSlider("THRES", 0, 255, threshold , sliderWidth , sliderHeight );
-	leftCanvas->setWidgetPosition(OFX_UI_WIDGET_POSITION_RIGHT);
-	leftCanvas->addWidgetRight(new ofxUIImage( w_disp, h_disp , &ofThres,"Source"), OFX_UI_ALIGN_RIGHT );
+	topCanvas->addSlider("THRES", 0, 255, threshold , sliderWidth , sliderHeight );
+	topCanvas->setWidgetPosition(OFX_UI_WIDGET_POSITION_RIGHT);
+	topCanvas->addWidgetRight(new ofxUIImage( w_disp, h_disp , &ofThres,"Source"), OFX_UI_ALIGN_RIGHT );
+	
+	// ***** OSC CANVAS ******* //
+	oscCanvas->addLabel("OSC",OFX_UI_FONT_SMALL);
+	oscCanvas->addSpacer();
+	oscCanvas->setWidgetFontSize( OFX_UI_FONT_SMALL );
+	oscCanvas->addToggle("Send blob data through OSC", false);
+	oscCanvas->addLabel("Host", OFX_UI_FONT_SMALL);
+	oscCanvas->addTextInput("OSC HOST", HOST);
+	oscCanvas->addLabel("Port", OFX_UI_FONT_SMALL);
+	oscCanvas->addTextInput("OSC PORT", ofToString(PORT));
 	
 	
+	//********** CENTRAL CANVAS *************//
 	
+	centerCanvas->addLabel("BLOB DETECTION AND FILTERING", OFX_UI_FONT_SMALL);
+	centerCanvas->addSpacer();
+	centerCanvas->addImage("Blobs", &ofBlobs );
+	centerCanvas->addRangeSlider("Area filter", 0, 0.5, 0, 0.5);
 
 	
 	ofAddListener( leftCanvas->newGUIEvent , this ,&testApp::guiEvent);	
+	ofAddListener( topCanvas->newGUIEvent , this ,&testApp::guiEventTopCanvas);	
+	ofAddListener( centerCanvas->newGUIEvent , this ,&testApp::guiEventCenterCanvas);
+	ofAddListener( oscCanvas->newGUIEvent , this ,&testApp::guiEventOscCanvas);
+	
 
 	}
 
 
-//--- GUI Event ----
+
 void testApp::guiEvent( ofxUIEventArgs &e){
+	//--- GUI Events for the left pane ----
 	
 	string name = e.widget->getName(); 
 	int kind = e.widget->getKind(); 
@@ -142,10 +186,6 @@ void testApp::guiEvent( ofxUIEventArgs &e){
 		ofxUISlider *slider = (ofxUISlider *) e.widget;
 		sourceBlurFact = slider->getScaledValue();
 		slider->setValue( sourceBlurFact );
-	}
-	else if ( name == "THRES" ){
-		ofxUISlider *slider = (ofxUISlider *) e.widget;
-		threshold = slider->getScaledValue();
 	}
 	// ******* Channel Radio ******* //
 	else if ( name == "Red"){
@@ -166,6 +206,76 @@ void testApp::guiEvent( ofxUIEventArgs &e){
 	}
 
 }
+void testApp:: guiEventTopCanvas(ofxUIEventArgs &e){
+	
+	string name = e.widget->getName();
+	int kind = e.widget->getKind();
+	
+	if( name == "Remap"){
+		ofxUIRangeSlider *rangeSlider = (ofxUIRangeSlider * ) e.widget;
+		remapLowValue = rangeSlider->getScaledValueLow();
+		remapHighValue = rangeSlider->getScaledValueHigh();
+		rangeSlider->setValueHigh( remapHighValue );
+		rangeSlider->setValueLow( remapLowValue );	
+
+	}
+	else if ( name =="Contrast stretch") {
+		ofxUIToggle *toggle = (ofxUIToggle*) e.widget;
+		contrastStretch = toggle->getValue();
+		/*if ( toggle->getValue() == true) {
+			ofxUIRangeSlider *rangeSlider = toggle->getCanvasParent()->getWidget("Remap");
+		}*/
+		cout << " In contrast stretch" << endl;
+	}
+	else if( name == "Reset"){
+		remapLowValue = 0;
+		remapHighValue = 255;
+		ofxUICanvas * p =(ofxUICanvas*) ((e.widget)->getCanvasParent());
+		ofxUIRangeSlider *r = (ofxUIRangeSlider *) p->getWidget("Remap");
+		r->setValueLow( remapLowValue );
+		r->setValueHigh( remapHighValue );
+	}
+	else if ( name == "THRES" ){
+		ofxUISlider *slider = (ofxUISlider *) e.widget;
+		threshold = slider->getScaledValue();
+	}
+	
+
+}
+
+void testApp::guiEventCenterCanvas(ofxUIEventArgs &e ){
+	// GUI EVENTS for center canvas
+	string name = e.widget->getName(); 
+	int kind = e.widget->getKind();
+	
+	if( name == "Area filter" ){
+		ofxUIRangeSlider * rs = (ofxUIRangeSlider * ) e.widget;
+		minBlobArea = rs->getScaledValueLow()*w_cam*h_cam;
+		maxBlobArea = rs->getScaledValueHigh()*w_cam*h_cam;
+	}
+	
+}
+void testApp::guiEventOscCanvas(ofxUIEventArgs &e ){
+	// GUI EVENTS for osc canvas
+	string name = e.widget->getName(); 
+	int kind = e.widget->getKind();
+	
+	if( name == "Send blob data through OSC"){
+		ofxUIToggle *t = (ofxUIToggle *) e.widget;
+		sendThroughOsc = ( t->getValue() );
+	}
+	else if ( name == "OSC HOST" ){
+		ofxUITextInput *t = (ofxUITextInput * ) e.widget;
+		HOST = t->getTextString();
+		oscSender.setup(HOST , PORT);
+	}
+	else if ( name == "OSC PORT"){
+		ofxUITextInput *t = (ofxUITextInput * ) e.widget;
+		PORT = ofToInt( t->getTextString() );
+		oscSender.setup(HOST , PORT);
+	}
+	
+}
 //--------------------------------------------------------------
 void testApp::update(){
 
@@ -181,33 +291,36 @@ void testApp::update(){
 		if(selectedChannel == grayscale){
 			escalaDeGrises = colorImg;
 			bkgGrises = bkg;
-			//cout << "In chaell selection if with selected Channel " << selectedChannel << endl;
+			
 		}
 		else{
-			//cout << "In chaell selection if" << endl;
-			cout << "In chaell selection if with selected Channel " << selectedChannel << endl;
 			colorImg.convertToGrayscalePlanarImage(escalaDeGrises, selectedChannel ) ;
 			bkg.convertToGrayscalePlanarImage( bkgGrises, selectedChannel);
 		}
 		
-		// Convert input and background to grayscale 
-		
-		//escalaDeGrises = colorImg;
-		//bkgGrises = bkg;
 		
 		// Blur both of them
 		
 		bkgGrises.blur( bkgBlurFact ); // taking value from sliders!
 		escalaDeGrises.blur( sourceBlurFact ); 
+	
+		// Set to ofImages for display
 		/**/ ofBkg.setFromPixels( bkgGrises.getPixelsRef());
 		/**/ ofSrc.setFromPixels( escalaDeGrises.getPixelsRef());
 		
 		// 
-		imgRestada.absDiff( escalaDeGrises,  bkgGrises ); 
+		imgRestada.absDiff( escalaDeGrises,  bkgGrises );
+		if( contrastStretch == true){
+			imgRestada.contrastStretch();
+		}
+		else{
+			imgRestada.convertToRange(remapLowValue, remapHighValue);
+		}
+
 		/**/ ofSub.setFromPixels( imgRestada.getPixelsRef());
 		
 		thresholded = imgRestada;
-		thresholded.threshold( threshold);
+		thresholded.threshold( threshold );
 		/**/ ofThres.setFromPixels( thresholded.getPixelsRef() );
 		
 
@@ -220,30 +333,35 @@ void testApp::update(){
 		//contourFinder.findContours( thresholded , w_cam*h_cam/30.0f , w_cam*h_cam/4.0f , 5, false);
 		//blobs.erase();
 		unsigned int result = cvLabel(theImage , labelImage , blobs);
-		/*cvRenderBlobs(labelImage, blobs, theImage, theImage, CV_BLOB_RENDER_CENTROID|
-															CV_BLOB_RENDER_BOUNDING_BOX|
-																CV_BLOB_RENDER_ANGLE|
-																CV_BLOB_RENDER_COLOR);
-		*/
-		/*
-		cout << "Depth of labelImage " << labelImage->depth << endl; 
-		cout << "Depth of labeledImage (OFcv) " << labeledImage.getCvImage()->depth << endl;
-		cout << "Length of blob vec " << blobs.size() << endl;
-		*/
+		
+		cvFilterByArea(blobs, minBlobArea , maxBlobArea);
 		cvRenderBlobs(labelImage, blobs, theImage, imprueba,  CV_BLOB_RENDER_CENTROID|
 					  CV_BLOB_RENDER_BOUNDING_BOX|
 					  CV_BLOB_RENDER_ANGLE|
 					  CV_BLOB_RENDER_COLOR);
 
-//		otherImage = labelImage.getPi
+
 		labeledImage = imprueba;
+		/**/ ofBlobs.setFromPixels( labeledImage.getPixelsRef() );
 		
+		// ******** SEND BLOBS THROUGH OSC ******* //
 		
-		//ofxCvGrayscaleImage im = theImage;
-		//im.draw( , <#float y#>, <#float w#>, <#float h#>)
+		if ( blobs.size() > 0  && sendThroughOsc == true ) {
+			
+			for(CvBlobs::const_iterator it = blobs.begin() ; it !=blobs.end(); it++){
+				//cout << "iterating over blobs. Size of vec: " << blobs.size() << "| i: " << i << endl;
+				CvBlob * blob = it->second;
+				ofxOscMessage m;
+				m.setAddress("/blob");
+				
+				// Send data in normalized coordinates
+				m.addFloatArg(blob->centroid.x / w_cam);
+				m.addFloatArg(blob->centroid.y / h_cam);
+				m.addFloatArg( cvAngle( blob ));
+				oscSender.sendMessage( m );
+			}
+		}
 		
-		
-		//imshow("trin",labelImage);
 	}
 	
 
@@ -256,7 +374,7 @@ void testApp::draw(){
 	
 	// Contorno lib
 	
-	labeledImage.draw( 300, 120) ;  
+	//labeledImage.draw( 300, 300) ;  
 
 	
 	// Blobs librer’a:
@@ -298,14 +416,7 @@ void testApp::keyPressed(int key){
 		ofBkg.setFromPixels( bkg.getPixelsRef() );
 		//ofBkg.update();
 	}
-	if (key == '.'){
-		threshold++;
-		cout << "threshold " << threshold << endl;
-	}
-	if (key == ','){
-		threshold--;
-	}
-
+	
 }
 
 //--------------------------------------------------------------
