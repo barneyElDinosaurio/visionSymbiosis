@@ -54,6 +54,8 @@ public:
 	int oscCanvasWidth;
 	int oscCanvasHeight;
 	
+	void setupGUI();
+	
 	// Dimensiones de las im‡genes a mostrar 
 	int w_disp;
 	int h_disp;
@@ -78,6 +80,15 @@ public:
 	// Background para restar
 	ofxCvColorImage bkg;
 	
+	// Imagen fuente en grises
+	ofxCvGrayscaleImage escalaDeGrises;
+	ofxCvGrayscaleImage imgRestada;
+	ofxCvGrayscaleImage bkgGrises;
+	ofxCvGrayscaleImage thresholded;
+	
+	ofxCvColorImage labeledBlobsImage;
+	ofxCvColorImage otherImage;
+	
 	// Im‡genes para display
 	ofImage ofUntouchedSrc;
 	ofImage ofSrc;
@@ -86,17 +97,15 @@ public:
 	ofImage ofThres;
 	ofImage ofBlobs;
 	
-	// Imagen fuente en grises
-	ofxCvGrayscaleImage escalaDeGrises;
-	ofxCvGrayscaleImage imgRestada;
-	ofxCvGrayscaleImage bkgGrises;
-	ofxCvGrayscaleImage thresholded;
+	ofImage laPruebaExterna;
 	
-	ofxCvColorImage labeledImage;
-	ofxCvColorImage otherImage;
+	bool blobDetectionOn;
 	
+	// Ipl Images for cvBlob
+	IplImage *thresholdedIpl;
+//	IplImage *labelImage;
+	//IplImage *iplBlobsImage;
 	
-	ofxCvContourFinder contourFinder;
 	
 	//cvBlob stuff	
 	CvBlobs blobs;
