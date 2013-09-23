@@ -135,7 +135,7 @@ void testApp::update(){
 		iplBlobsImage = cvCreateImage( cvGetSize(thresholdedIpl) , 8, 3);
 		
 		
-		
+		// **** BLOB DETECTION OCCURS HERE ****
 		unsigned int result = cvLabel(thresholdedIpl , labelImage , blobs);
 		
 		//		cout << "BLOB NUM " << blobs.size() <<endl;
@@ -161,6 +161,7 @@ void testApp::update(){
 		cvReleaseImage(&labelImage);
 		
 		cvReleaseImage(&iplBlobsImage);
+		
 		// ******** SEND BLOBS THROUGH OSC ******* //
 		
 		if ( blobs.size() > 0  && sendThroughOsc == true ) {
@@ -169,13 +170,20 @@ void testApp::update(){
 				//cout << "iterating over blobs. Size of vec: " << blobs.size() << "| i: " << i << endl;
 				CvBlob * blob = it->second;
 				ofxOscMessage m;
-				m.setAddress("/blob");
+				m.setAddress("/blob/data/"); // all in one.
+				
+				// - Message structure -
+				// posx posy angle area hu_moment_1 hu_moment_2
 				
 				// Send data in normalized coordinates
 				m.addFloatArg(blob->centroid.x / w_cam);
 				m.addFloatArg(blob->centroid.y / h_cam);
 				m.addFloatArg( cvAngle( blob ));
+				m.addFloatArg( blob->area);
+				m.addFloatArg( blob->p1);
+				m.addFloatArg( blob->p2);				
 				oscSender.sendMessage( m );
+			
 			}
 		}
 		
