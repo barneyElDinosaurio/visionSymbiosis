@@ -59,7 +59,7 @@ void testApp::setup(){
 	
 	// ****** OSC ******* //
 	
-	HOST = "127.0.0.1";
+	HOST = "192.168.1.2";
 	PORT = 9001;
 	oscSender.setup( HOST, PORT );
 	sendThroughOsc = true;
@@ -170,7 +170,7 @@ void testApp::update(){
 				//cout << "iterating over blobs. Size of vec: " << blobs.size() << "| i: " << i << endl;
 				CvBlob * blob = it->second;
 				ofxOscMessage m;
-				m.setAddress("/blob/data/"); // all in one.
+				m.setAddress("/blob/data"); // all in one.
 				
 				// - Message structure -
 				// posx posy angle area hu_moment_1 hu_moment_2
